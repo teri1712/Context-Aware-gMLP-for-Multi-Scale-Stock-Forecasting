@@ -182,7 +182,7 @@ class NoGraphMixer(nn.Module):
     def __init__(self, time_step, stocks, hidden_dim=20, depth=2):
         super(NoGraphMixer, self).__init__()
         self.time_step = time_step
-
+        # NOTE: Xóa toàn bộ code module này với gMLP
         self.gMlp = gMLP(time_step * 2 + time_step // 2, stocks, hidden_dim, depth)
 
     def forward(self, inputs):
