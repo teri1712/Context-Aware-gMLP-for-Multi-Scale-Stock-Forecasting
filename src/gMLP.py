@@ -2,19 +2,15 @@ import torch
 import torch.nn as nn
 
 
-class SpatialGatingUnit(nn.Module):
+class SoftmaxGatingUnit(nn.Module):
     def __init__(self, dim, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.ln = nn.Linear(dim, dim)
-        self.ctx_gate = nn.Sequential(
-            nn.Linear(5, dim),
-            nn.ReLU()
-        )
         self.softmax = nn.Softmax(dim=-1)
-        # self.acv = nn.Hardswish()
+        self.acv = nn.Hardswish()
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         # Split channels
         u, v = torch.chunk(x, chunks=2, dim=-1)
         # Apply normalization and spatial projection to v
@@ -24,9 +20,9 @@ class SpatialGatingUnit(nn.Module):
         # v = self.spatial_proj(v)  # [batch, dim, seq_len]
         # v = self.norm(v)
         # v = self.ln(v)
-        v = self.ln(v)
-        ctx = self.ctx_gate(ctx).unsqueeze(0)
-        v = self.softmax(v + ctx)
+
+        u = self.acv(u)
+        v = self.softmax(v)
         # v = v.transpose(-1, -2)  # [batch, seq_len, dim]
 
         # Element-wise multiplication with u
@@ -39,21 +35,21 @@ class gMLPBlock(nn.Module):
 
         self.norm = nn.LayerNorm(input_dim)
         self.channel_proj1 = nn.Linear(input_dim, hidden_dim * 2)
-        self.sgu = SpatialGatingUnit(hidden_dim, seq_len)
+        self.sgu = SoftmaxGatingUnit(hidden_dim, seq_len)
         self.channel_proj2 = nn.Linear(hidden_dim, input_dim)
         self.dropout = nn.Dropout(dropout_rate)
-        self.acv = nn.Hardswish()
+        # self.acv = nn.Hardswish()
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         residual = x
 
         # Norm and first projection
         x = self.norm(x)
         x = self.channel_proj1(x)
-        x = self.acv(x)
+        # x = self.acv(x)
 
         # Apply spatial gating unit
-        x = self.sgu(x, ctx)
+        x = self.sgu(x)
 
         # Second projection and dropout
         x = self.channel_proj2(x)
@@ -83,7 +79,7 @@ class gMLP(nn.Module):
             for _ in range(depth)
         ])
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         for block in self.blocks:
-            x = block(x, ctx)
+            x = block(x)
         return x
