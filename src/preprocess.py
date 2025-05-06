@@ -37,9 +37,8 @@ def market_state_from_closes(closes, close_col=3, window=16):
 
         metrics[k] = [mean_ret, slope, real_vol, disp, pca_ratio]
 
-    # z‑score normalisation (*all training windows)
-    mu = metrics.mean(axis=0)
-    sigma = metrics.std(axis=0, ddof=0)
-    metrics_norm = (metrics - mu) / sigma
+    min_vals = metrics.min(axis=0)
+    max_vals = metrics.max(axis=0)
+    metrics_norm = (metrics - min_vals) / (max_vals - min_vals)
 
     return metrics_norm
