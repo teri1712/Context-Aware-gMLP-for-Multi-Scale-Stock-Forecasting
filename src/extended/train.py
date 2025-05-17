@@ -129,7 +129,7 @@ def get_batch(offset=None):
     )
 
 
-print(market_name, " : ", end="")
+print(market_name, " : ", end="", flush=True)
 for epoch in range(epochs):
     np.random.shuffle(batch_offsets)
     tra_loss = 0.0
