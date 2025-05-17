@@ -12,7 +12,7 @@ class GatingUnit(nn.Module):
             nn.Linear(dim // 2, dim)
         )
         self.acv_trunk = nn.Hardswish()
-        self.acv_gate = nn.Hardswish()
+        self.acv_gate = nn.Softmax(dim=-1)
 
     def forward(self, x, ctx):
         # Split channels
