@@ -196,26 +196,27 @@ class NoGraphMixer(nn.Module):
 
 
 class StockMixer(nn.Module):
-    def __init__(self, stocks, time_steps, channels, market, scale):
+    def __init__(self, stocks, time_steps, channels, market, depth=2):
         super(StockMixer, self).__init__()
-        scale_dim = time_steps // 2
-        self.mixer = MultTime2dMixer(time_steps, channels, scale_dim=scale_dim)
+        # self.ln = nn.LayerNorm(channels)
+        self.mixer = MultTime2dMixer(time_steps, channels)
         self.channel_fc = nn.Linear(channels, 1)
-        self.time_fc = nn.Linear(time_steps * 2 + scale_dim, 1)
-        self.conv = nn.Conv1d(
-            in_channels=channels, out_channels=channels, kernel_size=2, stride=2
-        )
-        self.stock_mixer = NoGraphMixer(stocks, market)
-        self.time_fc_ = nn.Linear(time_steps * 2 + scale_dim, 1)
+        self.time_fc = nn.Linear(time_steps * 2 + time_steps // 2, 1)
+        self.scale1 = nn.Conv1d(channels, channels, kernel_size=2, stride=2)
+        self.stock_mixer = NoGraphMixer(time_steps, stocks, market, depth)
+        self.time_fc_ = nn.Linear(time_steps * 2 + time_steps // 2, 1)
 
-    def forward(self, inputs):
-        x = inputs.permute(0, 2, 1)
-        x = self.conv(x)
-        x = x.permute(0, 2, 1)
-        y = self.mixer(inputs, x)
+    def forward(self, inputs, ctx):
+        # inputs = self.ln(inputs)
+        # Test
+        x1 = inputs.permute(0, 2, 1)
+        x1 = self.scale1(x1)
+        x1 = x1.permute(0, 2, 1)
+
+        y = self.mixer(inputs, x1)
         y = self.channel_fc(y).squeeze(-1)
 
-        z = self.stock_mixer(y)
+        z = self.stock_mixer(y, ctx)
         y = self.time_fc(y)
         z = self.time_fc_(z)
-        return y + z
+        return z + y
