@@ -121,7 +121,7 @@ def get_batch(offset=None):
     )
 
 
-print(market_name)
+print(market_name, " : ", end="")
 for epoch in range(epochs):
     np.random.shuffle(batch_offsets)
     tra_loss = 0.0
@@ -158,7 +158,6 @@ for epoch in range(epochs):
         best_test_perf = test_perf
 
 print(
-    "Best Test performance:\n",
     "IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
         best_test_perf["IC"],
         best_test_perf["RIC"],
