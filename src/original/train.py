@@ -8,7 +8,6 @@ import torch as torch
 
 from evaluator import evaluate
 from model import get_loss, StockMixer
-from preprocess import market_state_from_closes
 
 np.random.seed(123456789)
 torch.random.manual_seed(12345678)
@@ -16,25 +15,22 @@ device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
 params = sys.argv[1:]
 
-data_path = "../dataset"
-market_name = "SP500"
+market_name = params[0]
 relation_name = "wikidata"
-stock_num = 474
+stock_num = int(params[1])
 lookback_length = 16
 epochs = 100
-valid_index = 1006
-test_index = 1006 + 253
+valid_index = int(params[2])
+test_index = int(params[3])
 fea_num = 5
-market_num = int(params[0])
-depth = int(params[1])
+market_num = int(params[4])
 steps = 1
 learning_rate = 0.001
 alpha = 0.1
-scale_factor = 2
+scale_factor = 3
 activation = "GELU"
-# Test
 
-dataset_path = "../dataset/" + market_name
+dataset_path = "../../dataset/" + market_name
 if market_name == "SP500":
     data = np.load("../dataset/SP500/SP500.npy")
     data = data[:, 915:, :]
@@ -56,17 +52,14 @@ else:
         gt_data = pickle.load(f)
     with open(os.path.join(dataset_path, "price_data.pkl"), "rb") as f:
         price_data = pickle.load(f)
-market_ctx = market_state_from_closes(eod_data)
-# eod_data = append_technical_indicators(eod_data)
-# print(eod_data)
-fea_num = eod_data.shape[2]
+
 trade_dates = mask_data.shape[1]
 model = StockMixer(
     stocks=stock_num,
     time_steps=lookback_length,
     channels=fea_num,
     market=market_num,
-    depth=depth,
+    scale=scale_factor,
 ).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -76,7 +69,6 @@ best_test_perf = None
 batch_offsets = np.arange(start=0, stop=valid_index, dtype=int)
 
 
-# Test
 def validate(start_index, end_index):
     with torch.no_grad():
         cur_valid_pred = np.zeros([stock_num, end_index - start_index], dtype=float)
@@ -89,10 +81,10 @@ def validate(start_index, end_index):
                 start_index - lookback_length - steps + 1,
                 end_index - lookback_length - steps + 1,
         ):
-            data_batch, mask_batch, price_batch, gt_batch, ctx = map(
+            data_batch, mask_batch, price_batch, gt_batch = map(
                 lambda x: torch.Tensor(x).to(device), get_batch(cur_offset)
             )
-            prediction = model(data_batch, ctx)
+            prediction = model(data_batch)
             cur_loss, cur_reg_loss, cur_rank_loss, cur_rr = get_loss(
                 prediction, gt_batch, price_batch, mask_batch, stock_num, alpha
             )
@@ -126,34 +118,27 @@ def get_batch(offset=None):
         np.expand_dims(mask_batch, axis=1),
         np.expand_dims(price_data[:, offset + seq_len - 1], axis=1),
         np.expand_dims(gt_data[:, offset + seq_len + steps - 1], axis=1),
-        market_ctx[offset - 1]
     )
 
 
-print("Training with parameters: ", "hidden_market=", market_num, "depth=", depth)
+print(market_name)
 for epoch in range(epochs):
-    # print(
-    #     "epoch{}##########################################################".format(
-    #         epoch + 1
-    #     )
-    # )
     np.random.shuffle(batch_offsets)
     tra_loss = 0.0
     tra_reg_loss = 0.0
     tra_rank_loss = 0.0
-    for j in range(1, valid_index - lookback_length - steps + 1):
-        data_batch, mask_batch, price_batch, gt_batch, ctx = map(
+    for j in range(valid_index - lookback_length - steps + 1):
+        data_batch, mask_batch, price_batch, gt_batch = map(
             lambda x: torch.Tensor(x).to(device), get_batch(batch_offsets[j])
         )
         optimizer.zero_grad()
-        prediction = model(data_batch, ctx)
+        prediction = model(data_batch)
         cur_loss, cur_reg_loss, cur_rank_loss, _ = get_loss(
             prediction, gt_batch, price_batch, mask_batch, stock_num, alpha
         )
         cur_loss = cur_loss
         cur_loss.backward()
         optimizer.step()
-        # print(j, ": ", cur_loss.item())
 
         tra_loss += cur_loss.item()
         tra_reg_loss += cur_reg_loss.item()
@@ -161,59 +146,20 @@ for epoch in range(epochs):
     tra_loss = tra_loss / (valid_index - lookback_length - steps + 1)
     tra_reg_loss = tra_reg_loss / (valid_index - lookback_length - steps + 1)
     tra_rank_loss = tra_rank_loss / (valid_index - lookback_length - steps + 1)
-    # print(
-    #     "Train : loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         tra_loss, tra_reg_loss, tra_rank_loss
-    #     )
-    # )
 
     val_loss, val_reg_loss, val_rank_loss, val_perf = validate(valid_index, test_index)
-    # print(
-    #     "Valid : loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         val_loss, val_reg_loss, val_rank_loss
-    #     )
-    # )
-
     test_loss, test_reg_loss, test_rank_loss, test_perf = validate(
         test_index, trade_dates
     )
-    # print(
-    #     "Test: loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         test_loss, test_reg_loss, test_rank_loss
-    #     )
-    # )
 
     if val_loss < best_valid_loss:
         best_valid_loss = val_loss
         best_valid_perf = val_perf
         best_test_perf = test_perf
 
-    # print(
-    #     "Valid performance:\n",
-    #     "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-    #         val_perf["mse"],
-    #         val_perf["IC"],
-    #         val_perf["RIC"],
-    #         val_perf["prec_10"],
-    #         val_perf["sharpe5"],
-    #     ),
-    # )
-    # print(
-    #     "Test performance:\n",
-    #     "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-    #         test_perf["mse"],
-    #         test_perf["IC"],
-    #         test_perf["RIC"],
-    #         test_perf["prec_10"],
-    #         test_perf["sharpe5"],
-    #     ),
-    #     "\n\n",
-    # )
-
 print(
     "Best Test performance:\n",
-    "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-        best_test_perf["mse"],
+    "IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
         best_test_perf["IC"],
         best_test_perf["RIC"],
         best_test_perf["prec_10"],

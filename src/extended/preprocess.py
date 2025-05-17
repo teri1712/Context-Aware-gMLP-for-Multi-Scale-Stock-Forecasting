@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def market_state_from_closes(closes, close_col=3, window=16):
+def market_state_from_closes(closes, close_col=-1, window=16):
     close_px = closes[:, :, close_col]  # (N, T)
     rets = np.log(close_px[:, 1:] / close_px[:, :-1])  # (N, T‑1)
 
