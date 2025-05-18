@@ -13,21 +13,17 @@ def main() -> None:
 
     original_dir = Path(__file__).resolve().parent / "original"
     for i in range(len(market_name)):
-        for j in range(len(stock_num)):
-            for k in range(len(valid_index)):
-                for l in range(len(test_index)):
-                    for x in range(len(market_values)):
-                        cmd = [
-                            "python3",
-                            "train.py",
-                            market_name[i],
-                            stock_num[j],
-                            valid_index[k],
-                            test_index[l],
-                            market_values[x],
-                        ]
+        cmd = [
+            "python3",
+            "train.py",
+            market_name[i],
+            stock_num[i],
+            valid_index[i],
+            test_index[i],
+            market_values[i],
+        ]
 
-                        run(cmd, check=True, cwd=original_dir)
+        run(cmd, check=True, cwd=original_dir)
 
 
 if __name__ == "__main__":
