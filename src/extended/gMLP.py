@@ -12,7 +12,7 @@ class GatingUnit(nn.Module):
             nn.Linear(dim // 2, dim)
         )
         self.acv_trunk = nn.Hardswish()
-        self.acv_gate = nn.Softmax(dim=-1)
+        self.acv_gate = nn.Sigmoid()
 
     def forward(self, x, ctx):
         # Split channels
@@ -37,14 +37,10 @@ class gMLPBlock(nn.Module):
 
     def forward(self, x, ctx):
         residual = x
-        # Norm and first projection
         x = self.norm(x)
         x = self.channel_proj1(x)
         x = self.sgu(x, ctx)
-
         x = self.channel_proj2(x)
-
-        # Add residual connection
         return x + residual
 
 

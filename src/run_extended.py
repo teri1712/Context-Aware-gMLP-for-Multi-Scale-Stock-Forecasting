@@ -8,8 +8,8 @@ def main() -> None:
     stock_num: List[str] = ["1026", "474", "117"]
     valid_index: List[str] = ["756", "1006", "620"]
     test_index: List[str] = ["1008", "1259", "827"]
-    market_values: List[str] = ["48", "15", "25"]
-    depth_values: List[str] = ["3", "3", "5"]
+    market_values: List[str] = ["15", "32", "20"]
+    depth_values: List[str] = ["3", "5", "5"]
 
     extended_dir = Path(__file__).resolve().parent / "extended"
 

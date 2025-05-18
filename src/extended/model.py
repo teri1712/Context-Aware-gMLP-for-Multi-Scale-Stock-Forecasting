@@ -12,10 +12,18 @@ def get_loss(prediction, ground_truth, base_price, mask, batch_size, alpha):
     all_one = torch.ones(batch_size, 1, dtype=torch.float32).to(device)
     return_ratio = torch.div(torch.sub(prediction, base_price), base_price)
     reg_loss = F.mse_loss(return_ratio * mask, ground_truth * mask)
-    pre_pw_dif = torch.sub(return_ratio @ all_one.t(), all_one @ return_ratio.t())
-    gt_pw_dif = torch.sub(all_one @ ground_truth.t(), ground_truth @ all_one.t())
+    pre_pw_dif = torch.sub(
+        return_ratio @ all_one.t(),
+        all_one @ return_ratio.t()
+    )
+    gt_pw_dif = torch.sub(
+        all_one @ ground_truth.t(),
+        ground_truth @ all_one.t()
+    )
     mask_pw = mask @ mask.t()
-    rank_loss = torch.mean(F.relu(pre_pw_dif * gt_pw_dif * mask_pw))
+    rank_loss = torch.mean(
+        F.relu(pre_pw_dif * gt_pw_dif * mask_pw)
+    )
     loss = reg_loss + alpha * rank_loss
     return loss, reg_loss, rank_loss, return_ratio
 
@@ -60,39 +68,21 @@ class Mixer2d(nn.Module):
         return x + y
 
 
-class TimeMixing(nn.Module):
-    def __init__(self, hidden_dim):
-        super().__init__()
-        self.layer_norm = nn.LayerNorm(hidden_dim)
-        self.mlp1 = nn.Linear(hidden_dim, hidden_dim * 2)
-        self.mlp2 = nn.Linear(hidden_dim * 2, 1)
-        self.gate = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim * 2),
-            nn.Sigmoid()
-        )
-        self.acv = nn.ReLU()
-
-    def forward(self, x):
-        x = self.layer_norm(x)
-        gate = self.gate(x)
-        x = self.acv(self.mlp1(x))
-
-        x = self.mlp2(x * gate)
-        return x
-
-
 class TriU(nn.Module):
     def __init__(self, time_step):
         super(TriU, self).__init__()
         self.time_step = time_step
-        self.triU = nn.ParameterList([
-            nn.Linear(i + 1, 1)
-            for i in range(time_step)])
+        self.triU = nn.ParameterList(
+            [
+                nn.Linear(i + 1, 1)
+                for i in range(time_step)
+            ]
+        )
 
     def forward(self, inputs):
         x = self.triU[0](inputs[:, :, 0].unsqueeze(-1))
         for i in range(1, self.time_step):
-            x = torch.cat([x, self.triU[i](inputs[:, :, 0: i + 1])], dim=-1)
+            x = torch.cat([x, self.triU[i](inputs[:, :, 0:i + 1])], dim=-1)
         return x
 
 
@@ -116,27 +106,17 @@ class MultiScaleTimeMixer(nn.Module):
         super(MultiScaleTimeMixer, self).__init__()
         self.time_step = time_step
         self.scale_count = scale_count
-        self.mix_layer = nn.ParameterList(
-            [
-                nn.Sequential(
-                    nn.Conv1d(
-                        in_channels=channel,
-                        out_channels=channel,
-                        kernel_size=2 ** i,
-                        stride=2 ** i,
-                    ),
-                    TriU(int(time_step / 2 ** i)),
-                    nn.Hardswish(),
-                    TriU(int(time_step / 2 ** i)),
-                )
-                for i in range(scale_count)
-            ]
-        )
+        self.mix_layer = nn.ParameterList([nn.Sequential(
+            nn.Conv1d(in_channels=channel, out_channels=channel, kernel_size=2 ** i, stride=2 ** i),
+            TriU(int(time_step / 2 ** i)),
+            nn.Hardswish(),
+            TriU(int(time_step / 2 ** i))
+        ) for i in range(scale_count)])
         self.mix_layer[0] = nn.Sequential(
             nn.LayerNorm([time_step, channel]),
             TriU(int(time_step)),
             nn.Hardswish(),
-            TriU(int(time_step)),
+            TriU(int(time_step))
         )
 
     def forward(self, x):
@@ -160,8 +140,8 @@ class Mixer2dTriU(nn.Module):
         x = x.permute(0, 2, 1)
         x = self.timeMixer(x)
         x = x.permute(0, 2, 1)
-        x = self.LN_2(x + inputs)
 
+        x = self.LN_2(x + inputs)
         y = self.channelMixer(x)
         return x + y
 
@@ -171,8 +151,10 @@ class MultTime2dMixer(nn.Module):
         super(MultTime2dMixer, self).__init__()
         self.mix_layer = Mixer2dTriU(time_step, channel)
         self.scale1_mix_layer = Mixer2dTriU(time_step // 2, channel)
+        # self.att = HierarchicalFeatureFusion(time_step, channel)
 
     def forward(self, inputs, x1):
+        # w0, w1 = self.att([inputs, x1]).chunk(2, dim=1)
         x = self.mix_layer(inputs)
         x1 = self.scale1_mix_layer(x1)
         return torch.cat([inputs, x, x1], dim=1)
@@ -191,7 +173,6 @@ class NoGraphMixer(nn.Module):
         x = self.gMlp(x, ctx)
 
         x = x.permute(1, 0)
-
         return x
 
 

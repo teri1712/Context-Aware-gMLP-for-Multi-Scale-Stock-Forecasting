@@ -135,7 +135,9 @@ for epoch in range(epochs):
     tra_loss = 0.0
     tra_reg_loss = 0.0
     tra_rank_loss = 0.0
-    for j in range(1, valid_index - lookback_length - steps + 1):
+    for j in range(valid_index - lookback_length - steps + 1):
+        if batch_offsets[j] == 0:
+            continue
         data_batch, mask_batch, price_batch, gt_batch, ctx = map(
             lambda x: torch.Tensor(x).to(device), get_batch(batch_offsets[j])
         )
@@ -147,6 +149,7 @@ for epoch in range(epochs):
         cur_loss = cur_loss
         cur_loss.backward()
         optimizer.step()
+
         tra_loss += cur_loss.item()
         tra_reg_loss += cur_reg_loss.item()
         tra_rank_loss += cur_rank_loss.item()
@@ -155,9 +158,8 @@ for epoch in range(epochs):
     tra_rank_loss = tra_rank_loss / (valid_index - lookback_length - steps + 1)
 
     val_loss, val_reg_loss, val_rank_loss, val_perf = validate(valid_index, test_index)
-    test_loss, test_reg_loss, test_rank_loss, test_perf = validate(
-        test_index, trade_dates
-    )
+
+    test_loss, test_reg_loss, test_rank_loss, test_perf = validate(test_index, trade_dates)
 
     if val_loss < best_valid_loss:
         best_valid_loss = val_loss
