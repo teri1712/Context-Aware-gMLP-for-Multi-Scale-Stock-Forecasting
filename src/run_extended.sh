@@ -8,16 +8,6 @@ depth_values=("3" "5" "5")
 
 cd extended/
 for i in "${!market_name[@]}"; do
-  for j in "${!stock_num[@]}"; do
-    for k in "${!valid_index[@]}"; do
-      for l in "${!test_index[@]}"; do
-        for x in "${!market_values[@]}"; do
-          for y in "${!depth_values[@]}"; do
-            python3 train.py ${market_name[$i]} ${stock_num[$j]} ${valid_index[$k]} ${test_index[$l]} ${market_values[$x]} ${depth_values[$y]}
-          done
-        done
-      done
-    done
-  done
+  python3 train.py ${market_name[$i]} ${stock_num[$i]} ${valid_index[$i]} ${test_index[$i]} ${market_values[$i]} ${depth_values[$i]}
 done
 

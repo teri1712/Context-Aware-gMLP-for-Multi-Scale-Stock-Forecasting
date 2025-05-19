@@ -32,7 +32,7 @@ activation = "GELU"
 
 dataset_path = "../../dataset/" + market_name
 if market_name == "SP500":
-    data = np.load("../dataset/SP500/SP500.npy")
+    data = np.load("../../dataset/SP500/SP500.npy")
     data = data[:, 915:, :]
     price_data = data[:, :, -1]
     mask_data = np.ones((data.shape[0], data.shape[1]))
