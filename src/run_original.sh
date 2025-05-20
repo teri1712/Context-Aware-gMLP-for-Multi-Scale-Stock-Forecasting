@@ -7,5 +7,11 @@ market_values=("20" "8" "10")
 
 cd original/
 for i in "${!market_name[@]}"; do
-  python3 train.py ${market_name[$i]} ${stock_num[$i]} ${valid_index[$i]} ${test_index[$i]} ${market_values[$i]}
+  if [ "${market_name[$i]}" == "SP500" ]; then
+    git checkout b657771600cd8b0c40267ece85412e2a21aafc17
+    python3 train.py ${market_name[$i]} ${stock_num[$i]} ${valid_index[$i]} ${test_index[$i]} ${market_values[$i]}
+    git checkout HEAD
+  else
+    python3 train.py ${market_name[$i]} ${stock_num[$i]} ${valid_index[$i]} ${test_index[$i]} ${market_values[$i]}
+  fi
 done
