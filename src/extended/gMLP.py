@@ -14,12 +14,12 @@ class GatingUnit(nn.Module):
         self.acv_trunk = nn.Hardswish()
         self.acv_gate = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x, ctx):
         # Split channels
         u, v = torch.chunk(x, chunks=2, dim=-1)
 
         u = self.acv_trunk(u)
-        v = self.acv_gate(v)
+        v = self.acv_gate(v + self.ln(ctx))
 
         # Element-wise multiplication with u
         return u * v
@@ -35,11 +35,11 @@ class gMLPBlock(nn.Module):
         self.channel_proj2 = nn.Linear(hidden_dim, input_dim)
         self.dropout = nn.Dropout(dropout_rate)
 
-    def forward(self, x):
+    def forward(self, x, ctx):
         residual = x
         x = self.norm(x)
         x = self.channel_proj1(x)
-        x = self.sgu(x)
+        x = self.sgu(x, ctx)
         x = self.channel_proj2(x)
         return x + residual
 
@@ -64,7 +64,7 @@ class gMLP(nn.Module):
             for _ in range(depth)
         ])
 
-    def forward(self, x):
+    def forward(self, x, ctx):
         for block in self.blocks:
-            x = block(x)
+            x = block(x, ctx)
         return x

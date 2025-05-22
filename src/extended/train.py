@@ -8,6 +8,7 @@ import torch as torch
 
 from evaluator import evaluate
 from model import get_loss, StockMixer
+from preprocess import market_state_from_closes
 
 np.random.seed(123456789)
 torch.random.manual_seed(12345678)
@@ -54,7 +55,7 @@ else:
         gt_data = pickle.load(f)
     with open(os.path.join(dataset_path, "price_data.pkl"), "rb") as f:
         price_data = pickle.load(f)
-# market_ctx = market_state_from_closes(eod_data)
+market_ctx = market_state_from_closes(eod_data)
 # eod_data = append_technical_indicators(eod_data)
 # print(eod_data)
 fea_num = eod_data.shape[2]
@@ -87,10 +88,10 @@ def validate(start_index, end_index):
                 start_index - lookback_length - steps + 1,
                 end_index - lookback_length - steps + 1,
         ):
-            data_batch, mask_batch, price_batch, gt_batch = map(
+            data_batch, mask_batch, price_batch, gt_batch, ctx = map(
                 lambda x: torch.Tensor(x).to(device), get_batch(cur_offset)
             )
-            prediction = model(data_batch)
+            prediction = model(data_batch, ctx)
             cur_loss, cur_reg_loss, cur_rank_loss, cur_rr = get_loss(
                 prediction, gt_batch, price_batch, mask_batch, stock_num, alpha
             )
@@ -124,7 +125,7 @@ def get_batch(offset=None):
         np.expand_dims(mask_batch, axis=1),
         np.expand_dims(price_data[:, offset + seq_len - 1], axis=1),
         np.expand_dims(gt_data[:, offset + seq_len + steps - 1], axis=1),
-        # market_ctx[offset - 1]
+        market_ctx[offset - 1]
     )
 
 
@@ -137,11 +138,11 @@ for epoch in range(epochs):
     for j in range(valid_index - lookback_length - steps + 1):
         if batch_offsets[j] == 0:
             continue
-        data_batch, mask_batch, price_batch, gt_batch = map(
+        data_batch, mask_batch, price_batch, gt_batch, ctx = map(
             lambda x: torch.Tensor(x).to(device), get_batch(batch_offsets[j])
         )
         optimizer.zero_grad()
-        prediction = model(data_batch)
+        prediction = model(data_batch, ctx)
         cur_loss, cur_reg_loss, cur_rank_loss, _ = get_loss(
             prediction, gt_batch, price_batch, mask_batch, stock_num, alpha
         )

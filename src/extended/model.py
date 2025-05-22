@@ -166,11 +166,11 @@ class NoGraphMixer(nn.Module):
         self.time_step = time_step
         self.gMlp = gMLP(time_step * 2 + time_step // 2, stocks, hidden_dim, depth)
 
-    def forward(self, inputs):
+    def forward(self, inputs, ctx):
         x = inputs
         x = x.permute(1, 0)
 
-        x = self.gMlp(x)
+        x = self.gMlp(x, ctx)
 
         x = x.permute(1, 0)
         return x
@@ -187,7 +187,9 @@ class StockMixer(nn.Module):
         self.stock_mixer = NoGraphMixer(time_steps, stocks, market, depth)
         self.time_fc_ = nn.Linear(time_steps * 2 + time_steps // 2, 1)
 
-    def forward(self, inputs):
+    def forward(self, inputs, ctx):
+        # inputs = self.ln(inputs)
+        # Test
         x1 = inputs.permute(0, 2, 1)
         x1 = self.scale1(x1)
         x1 = x1.permute(0, 2, 1)
@@ -195,7 +197,7 @@ class StockMixer(nn.Module):
         y = self.mixer(inputs, x1)
         y = self.channel_fc(y).squeeze(-1)
 
-        z = self.stock_mixer(y)
+        z = self.stock_mixer(y, ctx)
         y = self.time_fc(y)
         z = self.time_fc_(z)
         return z + y
