@@ -11,11 +11,11 @@ params = sys.argv[1:]
 def main() -> None:
     # Parameters
     model = params[0];
+    hidden_dim = params[1];
     market_name: List[str] = ["NASDAQ", "SP500", "crypto"]
     stock_num: List[str] = ["1026", "474", "117"]
     valid_index: List[str] = ["756", "1006", "620"]
     test_index: List[str] = ["1008", "1259", "827"]
-    market_values: List[str] = ["20", "8", "10"]
 
     original_dir = Path(__file__).resolve().parent / model
     for i in range(len(market_name)):
@@ -26,7 +26,7 @@ def main() -> None:
             stock_num[i],
             valid_index[i],
             test_index[i],
-            market_values[i],
+            hidden_dim,
         ]
         run(cmd, check=True, cwd=original_dir)
 

@@ -17,15 +17,15 @@ def get_loss(prediction, ground_truth, base_price, mask, batch_size, alpha):
 
 
 class GRUModel(nn.Module):
-    def __init__(self, stocks, time_steps, channels):
+    def __init__(self, stocks, time_steps, channels, hidden_dim):
         super(GRUModel, self).__init__()
-        self.gru = nn.GRU(input_size=channels, hidden_size=128, num_layers=1, batch_first=True)
-        self.fc = nn.Linear(128, 1)
+        self.gru = nn.GRU(input_size=channels, hidden_size=hidden_dim, num_layers=1, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, 1)
         self.stocks = stocks
 
     def forward(self, inputs):
         # inputs: [stocks, time_steps, channels]
-        out, _ = self.gru(inputs)  # [stocks, time_steps, 128]
-        out = out[:, -1, :]  # [stocks, 128]
+        out, _ = self.gru(inputs)  # [stocks, time_steps, hidden_dim]
+        out = out[:, -1, :]  # [stocks, hidden_dim]
         out = self.fc(out)  # [stocks, 1]
         return out

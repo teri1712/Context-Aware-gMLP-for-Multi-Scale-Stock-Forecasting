@@ -23,7 +23,7 @@ epochs = 100
 valid_index = int(params[2])
 test_index = int(params[3])
 fea_num = 5
-market_num = int(params[4])
+hidden_dim = int(params[4])
 steps = 1
 learning_rate = 0.001
 alpha = 0.1
@@ -58,6 +58,8 @@ model = TransformerModel(
     stocks=stock_num,
     time_steps=lookback_length,
     channels=fea_num,
+    hidden_dim=hidden_dim,
+
 ).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
