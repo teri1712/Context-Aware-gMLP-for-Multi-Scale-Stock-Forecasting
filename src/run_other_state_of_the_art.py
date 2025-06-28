@@ -10,8 +10,9 @@ params = sys.argv[1:]
 
 def main() -> None:
     # Parameters
-    model = params[0];
-    hidden_dim = params[1];
+    model = params[0]
+    hidden_dim = params[1]
+    num_layers = params[2]
     market_name: List[str] = ["NASDAQ", "SP500", "crypto"]
     stock_num: List[str] = ["1026", "474", "117"]
     valid_index: List[str] = ["756", "1006", "620"]
@@ -27,6 +28,7 @@ def main() -> None:
             valid_index[i],
             test_index[i],
             hidden_dim,
+            num_layers
         ]
         run(cmd, check=True, cwd=original_dir)
 
