@@ -16,17 +16,16 @@ device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
 params = sys.argv[1:]
 
-data_path = "../dataset"
-market_name = "SP500"
+market_name = params[0]
 relation_name = "wikidata"
-stock_num = 474
+stock_num = int(params[1])
 lookback_length = 16
 epochs = 100
-valid_index = 1006
-test_index = 1006 + 253
+valid_index = int(params[2])
+test_index = int(params[3])
 fea_num = 5
-market_num = int(params[0])
-depth = int(params[1])
+market_num = int(params[4])
+depth = int(params[5])
 steps = 1
 learning_rate = 0.001
 alpha = 0.1
@@ -34,9 +33,9 @@ scale_factor = 2
 activation = "GELU"
 # Test
 
-dataset_path = "../dataset/" + market_name
+dataset_path = "../../dataset/" + market_name
 if market_name == "SP500":
-    data = np.load("../dataset/SP500/SP500.npy")
+    data = np.load("../../dataset/SP500/SP500.npy")
     data = data[:, 915:, :]
     price_data = data[:, :, -1]
     mask_data = np.ones((data.shape[0], data.shape[1]))
@@ -130,18 +129,15 @@ def get_batch(offset=None):
     )
 
 
-print("Training with parameters: ", "hidden_market=", market_num, "depth=", depth)
+print(market_name, " : ", end="", flush=True)
 for epoch in range(epochs):
-    # print(
-    #     "epoch{}##########################################################".format(
-    #         epoch + 1
-    #     )
-    # )
     np.random.shuffle(batch_offsets)
     tra_loss = 0.0
     tra_reg_loss = 0.0
     tra_rank_loss = 0.0
-    for j in range(1, valid_index - lookback_length - steps + 1):
+    for j in range(valid_index - lookback_length - steps + 1):
+        if batch_offsets[j] == 0:
+            continue
         data_batch, mask_batch, price_batch, gt_batch, ctx = map(
             lambda x: torch.Tensor(x).to(device), get_batch(batch_offsets[j])
         )
@@ -153,7 +149,6 @@ for epoch in range(epochs):
         cur_loss = cur_loss
         cur_loss.backward()
         optimizer.step()
-        # print(j, ": ", cur_loss.item())
 
         tra_loss += cur_loss.item()
         tra_reg_loss += cur_reg_loss.item()
@@ -161,59 +156,18 @@ for epoch in range(epochs):
     tra_loss = tra_loss / (valid_index - lookback_length - steps + 1)
     tra_reg_loss = tra_reg_loss / (valid_index - lookback_length - steps + 1)
     tra_rank_loss = tra_rank_loss / (valid_index - lookback_length - steps + 1)
-    # print(
-    #     "Train : loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         tra_loss, tra_reg_loss, tra_rank_loss
-    #     )
-    # )
 
     val_loss, val_reg_loss, val_rank_loss, val_perf = validate(valid_index, test_index)
-    # print(
-    #     "Valid : loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         val_loss, val_reg_loss, val_rank_loss
-    #     )
-    # )
 
-    test_loss, test_reg_loss, test_rank_loss, test_perf = validate(
-        test_index, trade_dates
-    )
-    # print(
-    #     "Test: loss:{:.2e}  =  {:.2e} + alpha*{:.2e}".format(
-    #         test_loss, test_reg_loss, test_rank_loss
-    #     )
-    # )
+    test_loss, test_reg_loss, test_rank_loss, test_perf = validate(test_index, trade_dates)
 
     if val_loss < best_valid_loss:
         best_valid_loss = val_loss
         best_valid_perf = val_perf
         best_test_perf = test_perf
 
-    # print(
-    #     "Valid performance:\n",
-    #     "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-    #         val_perf["mse"],
-    #         val_perf["IC"],
-    #         val_perf["RIC"],
-    #         val_perf["prec_10"],
-    #         val_perf["sharpe5"],
-    #     ),
-    # )
-    # print(
-    #     "Test performance:\n",
-    #     "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-    #         test_perf["mse"],
-    #         test_perf["IC"],
-    #         test_perf["RIC"],
-    #         test_perf["prec_10"],
-    #         test_perf["sharpe5"],
-    #     ),
-    #     "\n\n",
-    # )
-
 print(
-    "Best Test performance:\n",
-    "mse:{:.2e}, IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
-        best_test_perf["mse"],
+    "IC:{:.2e}, RIC:{:.2e}, prec@10:{:.2e}, SR:{:.2e}".format(
         best_test_perf["IC"],
         best_test_perf["RIC"],
         best_test_perf["prec_10"],
