@@ -17,11 +17,11 @@ def get_loss(prediction, ground_truth, base_price, mask, batch_size, alpha):
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, stocks, time_steps, channels, hidden_dim):
+    def __init__(self, stocks, time_steps, channels, hidden_dim, num_layers):
         super(TransformerModel, self).__init__()
         self.embedding = nn.Linear(channels, hidden_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=4, batch_first=True)
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=2)
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.fc = nn.Linear(hidden_dim, 1)
         self.stocks = stocks
 

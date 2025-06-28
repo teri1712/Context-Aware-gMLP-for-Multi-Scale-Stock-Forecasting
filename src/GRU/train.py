@@ -24,6 +24,7 @@ valid_index = int(params[2])
 test_index = int(params[3])
 fea_num = 5
 hidden_dim = int(params[4])
+num_layers = int(params[5])
 steps = 1
 learning_rate = 0.001
 alpha = 0.1
@@ -59,6 +60,7 @@ model = GRUModel(
     time_steps=lookback_length,
     channels=fea_num,
     hidden_dim=hidden_dim,
+    num_layers=num_layers,
 ).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
