@@ -1,30 +1,13 @@
-# StockMixer
+Stock price forecasting requires modeling complex inter-asset relationships across multiple time horizon information,
+yet many top performing models such as Transformers with attention or graph neural networks suffer from high
+computational costs. To address this, we introduce a novel gated MLP model that helps enhance the ability of
+multi-horizon models to better capture inter-stock relationships by injecting window specific market context into the
+stock interaction stage. We validate our gMLP module within the lightweight StockMixer framework, which serves as our
+experimental testbed. Specifically, we retain StockMixer’s temporal patching of historical data and augment its stock
+mixing stage with an internal gating mechanism that leverages precomputed market features to learn rich, latent market
+states dynamically. This design captures subtle market dynamics without any attention or graph operations, preserving
+architectural simplicity and efficiency. Across multiple benchmark datasets, our gMLP-enhanced model consistently
+outperforms existing baselines in predictive accuracy.
 
-Official code implementation and supplementary material of AAAI 2024 paper "**StockMixer: A Simple yet Strong MLP-based Architecture for Stock Price Forecasting**". This work proposes a lightweight and effective MLP-based architecture for stock price forecasting named StockMixer. It consists of indicator mixing, temporal mixing and stock mixing to capture complex correlations in the stock data. The end-to-end training flow of StockMixer is presented as follows:
 
-<img width="90%" src ="./framework.png"/>
-
-## Environment
-
-- Python 3.7
-- torch~=1.10.1
-- numpy~=1.21.5
-- PyYAML, pandas, tqdm, matplotlib
-
-## Dataset and Preprocessing
-
-The original datasets(NASDAQ, NYSE and S&P500) are respectively available:
-
-NASDAQ/NYSE: [Temporal Relational Ranking for Stock Prediction](https://github.com/fulifeng/Temporal_Relational_Stock_Ranking)
-
-S&P500: [Efficient Integration of Multi-Order Dynamics and Internal Dynamics in Stock Movement Prediction](https://github.com/thanhtrunghuynh93/estimate)
-
-In order to improve file reading speed, we process the raw data to generate corresponding .pkl or .npy files. Datasets are provided in the `dataset` folder. Because StockMixer does not require prior knowledge similar to graphs or hypergraphs, our preprocessed dataset did not provide either. You can find them from the original datasets.
-
-## Running the Code
-
-```
-# edit configurations in train.py
-python src/train.py
-```
-
+<img width="90%" src ="./gMLP.png"/>
