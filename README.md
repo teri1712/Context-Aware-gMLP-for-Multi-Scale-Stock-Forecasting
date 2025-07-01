@@ -1,3 +1,7 @@
+# Gated MLP combined with market context
+
+## Abstraction
+
 Stock price forecasting requires modeling complex inter-asset relationships across multiple time horizon information,
 yet many top performing models such as Transformers with attention or graph neural networks suffer from high
 computational costs. To address this, we introduce a novel gated MLP model that helps enhance the ability of
@@ -11,3 +15,7 @@ outperforms existing baselines in predictive accuracy.
 
 
 <img width="90%" src ="./gMLP.png"/>
+
+## Acknowledgments
+
+Parts of this codebase are adapted from [StockMixer](https://github.com/SJTU-DMTai/StockMixer).
